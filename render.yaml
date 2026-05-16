@@ -40,7 +40,7 @@ services:
       - key: EMAIL_TO
         sync: false
       - key: MCP_SERVER_URL
-        value: https://google-docs-gmail-mcp-server-u06s.onrender.com
+        sync: false
       - key: PLAYSTORE_APP_ID
         sync: false
       - key: APPSTORE_APP_ID

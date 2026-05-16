@@ -2,7 +2,7 @@
 
 Run with::
 
-    MCP_SERVER_URL=https://google-docs-gmail-mcp-server-u06s.onrender.com \
+    MCP_SERVER_URL=<your-mcp-server-url> \
     EMAIL_TO=you@example.com \
     python -m examples.mcp_delivery_demo
 
@@ -36,10 +36,9 @@ from examples.weekly_pulse_demo import _android_report, _ios_report
 async def _amain() -> int:
     configure_logging()
 
-    if not os.getenv("MCP_SERVER_URL") and not os.getenv("MCP_SERVER_URL"):
+    if not os.getenv("MCP_SERVER_URL"):
         print(
-            "ERROR: set MCP_SERVER_URL to the MCP server, "
-            "e.g. https://google-docs-gmail-mcp-server-u06s.onrender.com",
+            "ERROR: set MCP_SERVER_URL to the MCP server URL.",
             file=sys.stderr,
         )
         return 2
