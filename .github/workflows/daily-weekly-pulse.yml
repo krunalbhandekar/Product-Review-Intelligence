@@ -1,0 +1,106 @@
+name: Daily Weekly Pulse Trigger
+
+on:
+  schedule:
+    # 06:30 UTC every day (12:00 IST). Adjust as needed.
+    - cron: "30 6 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Run without sending email"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+      # lookback_weeks is no longer a per-run input — it is loaded from
+      # the LOOKBACK_WEEKS env var on the server. Adjust the value in
+      # the Render dashboard (or render.yaml) if you need to change the
+      # window size.
+
+concurrency:
+  group: weekly-pulse-trigger
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  trigger:
+    name: Trigger Render endpoint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Invoke /run-weekly-pulse
+        env:
+          RENDER_BASE_URL: ${{ secrets.RENDER_BASE_URL }}
+          API_KEY: ${{ secrets.API_KEY }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${RENDER_BASE_URL:-}" ] || [ -z "${API_KEY:-}" ]; then
+            echo "::error::Missing required secrets RENDER_BASE_URL or API_KEY"
+            exit 1
+          fi
+
+          # Accept partial / no-data as success — the pipeline reports them
+          # explicitly in the response body and the corresponding HTTP codes
+          # (200/204/207) are not failures from the trigger's perspective.
+
+          url="${RENDER_BASE_URL%/}/run-weekly-pulse"
+
+          payload=$(printf '{"dry_run":%s}' "${DRY_RUN}")
+
+          echo "Triggering ${url} (dry_run=${DRY_RUN})"
+
+          attempt=0
+          max_attempts=3
+          backoff=10
+          body_file="$(mktemp)"
+
+          while : ; do
+            attempt=$((attempt + 1))
+            http_code=$(curl --silent --show-error \
+              --max-time 600 \
+              --output "${body_file}" \
+              --write-out "%{http_code}" \
+              --request POST "${url}" \
+              --header "Content-Type: application/json" \
+              --header "X-API-Key: ${API_KEY}" \
+              --data "${payload}" || echo "000")
+
+            echo "Attempt ${attempt}: HTTP ${http_code}"
+
+            # 200 succeeded, 204 no_data, 207 partial delivery — all "ran".
+            if [ "${http_code}" = "200" ] \
+               || [ "${http_code}" = "204" ] \
+               || [ "${http_code}" = "207" ]; then
+              echo "Response:"
+              cat "${body_file}"
+              echo
+              exit 0
+            fi
+
+            # Don't retry on auth / client errors (except 408/429)
+            if [ "${http_code}" != "000" ] \
+               && [ "${http_code}" != "408" ] \
+               && [ "${http_code}" != "429" ] \
+               && [ "${http_code}" -ge 400 ] \
+               && [ "${http_code}" -lt 500 ]; then
+              echo "::error::Non-retriable failure (HTTP ${http_code})"
+              cat "${body_file}" || true
+              exit 1
+            fi
+
+            if [ "${attempt}" -ge "${max_attempts}" ]; then
+              echo "::error::Exhausted ${max_attempts} attempts (last HTTP ${http_code})"
+              cat "${body_file}" || true
+              exit 1
+            fi
+
+            echo "Retrying in ${backoff}s..."
+            sleep "${backoff}"
+            backoff=$((backoff * 2))
+          done

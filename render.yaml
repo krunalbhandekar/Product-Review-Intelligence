@@ -1,0 +1,47 @@
+services:
+  - type: web
+    name: product-review-intelligence
+    runtime: python
+    plan: free
+    region: oregon
+    branch: main
+    autoDeploy: true
+
+    buildCommand: pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1 --proxy-headers --forwarded-allow-ips=* --no-access-log --timeout-keep-alive 30
+
+    healthCheckPath: /healthz
+
+    # Static operational configs (model, chunk sizes, retry counts,
+    # lookback window, etc.) live in app/config/settings.py — change
+    # them with a PR, not a dashboard tweak. Only secrets and
+    # deployment-specific identifiers belong here.
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: PYTHONDONTWRITEBYTECODE
+        value: "1"
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: PIP_NO_CACHE_DIR
+        value: "1"
+      - key: WEB_CONCURRENCY
+        value: "1"
+
+      # --- Secrets (set in the Render dashboard; sync:false keeps them out of git)
+      - key: API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+
+      # --- Deployment-specific identifiers
+      - key: GOOGLE_DOC_ID
+        sync: false
+      - key: EMAIL_TO
+        sync: false
+      - key: MCP_SERVER_URL
+        value: https://google-docs-gmail-mcp-server-u06s.onrender.com
+      - key: PLAYSTORE_APP_ID
+        sync: false
+      - key: APPSTORE_APP_ID
+        sync: false
