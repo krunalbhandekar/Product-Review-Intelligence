@@ -65,9 +65,15 @@ PMs, founders, and CX teams need a **continuous, structured, low-effort** way to
 
 ## 3. Architecture / Flow
 
+**End-to-end chain:**
+
+```
+GitHub Actions Scheduler ─▶ Render API ─▶ AI Summarization Pipeline ─▶ Google Docs + Email Delivery
+```
+
 ```
 ┌────────────────────────────────────────────────────────────────────────────┐
-│                         POST /run-weekly-pulse                             │
+│  GitHub Actions (cron: Mon 06:00 IST)  ───▶  POST /run-weekly-pulse        │
 └──────────────────────────────────┬─────────────────────────────────────────┘
                                    │
                 ┌──────────────────▼──────────────────┐
@@ -444,7 +450,90 @@ See [docs/render-deploy.md](docs/render-deploy.md) for the long-form guide.
 
 ---
 
-## 11. Example Output
+## 11. Automated Weekly Scheduler (GitHub Actions)
+
+The project supports **fully automated weekly execution** using GitHub Actions — no external cron, no separate worker, no babysitting.
+
+- GitHub Actions triggers the deployed Render API endpoint automatically **every Monday at 6:00 AM IST**.
+- The scheduler **only triggers the API**; the actual review ingestion, LLM summarization, Google Docs generation, and email delivery all happen inside the backend service on Render.
+- This keeps the scheduler dumb and the pipeline smart — easy to swap orchestrators (Render Cron, AWS EventBridge, Cloud Scheduler) without touching pipeline code.
+
+### Workflow file location
+
+```
+.github/workflows/daily-weekly-pulse.yml
+```
+
+### Cron explanation
+
+```yaml
+cron: "30 0 * * 1"
+```
+
+- GitHub Actions uses **UTC**, not local time.
+- `00:30 UTC` = **06:00 AM IST** (UTC+5:30).
+- The trailing `1` = **Monday**, so the job runs once a week.
+
+### Configure GitHub Secrets
+
+Go to:
+
+```
+GitHub Repository → Settings → Secrets and variables → Actions
+```
+
+Add the following repository secrets:
+
+| Secret            | Description                    |
+| ----------------- | ------------------------------ |
+| `RENDER_BASE_URL` | Public Render deployment URL   |
+| `API_KEY`         | Backend API authentication key |
+
+Example values:
+
+```text
+RENDER_BASE_URL=https://product-review-intelligence.onrender.com
+API_KEY=your-prod-key
+```
+
+The workflow fails fast with a clear error if either secret is missing.
+
+### Run Scheduler Manually
+
+The workflow also supports an on-demand run via `workflow_dispatch`:
+
+1. Go to: **GitHub Repo → Actions → Weekly Product Pulse Trigger**
+2. Click: **Run workflow**
+3. Select:
+   - **Branch** (usually `main`)
+   - **`dry_run` mode** (`true` or `false`)
+4. Click: **Run workflow**
+
+Behavior:
+
+- **`dry_run=false`** → Runs the full pipeline, generates the Google Docs report, and sends the email digest.
+- **`dry_run=true`** → Runs ingestion, summarization, and aggregation **without** delivery — useful for verifying the pipeline end-to-end without spamming the inbox.
+
+### Monitoring & Logging
+
+| Surface             | What you see                                                                            |
+| ------------------- | --------------------------------------------------------------------------------------- |
+| GitHub Actions logs | Each attempt, HTTP status, and the full JSON response from the Render API.              |
+| Render service logs | Structured `structlog` JSON logs for ingestion, summarization, MCP calls, and delivery. |
+| API response body   | `run_id`, counts, themes, and per-stage details for every triggered run.                |
+| Retry trail         | Every retry is printed with the attempt number, HTTP code, and backoff duration.        |
+
+### Reliability features built into the workflow
+
+- **Retry logic** — up to 3 attempts with exponential backoff (10s → 20s → 40s) on transient failures (`5xx`, `408`, `429`, network errors).
+- **Concurrency protection** — `concurrency.group: weekly-pulse-trigger` with `cancel-in-progress: false` ensures two runs never overlap.
+- **Timeout handling** — 15-minute job timeout plus a 10-minute per-request `--max-time` on `curl`.
+- **Partial-success handling** — treats `200` (succeeded), `204` (no data in window), and `207` (partial delivery) all as successful triggers, since they are pipeline-level outcomes — not transport failures.
+- **Fail-fast on auth errors** — non-retriable `4xx` responses (except `408`/`429`) exit immediately with the response body surfaced in the logs.
+
+---
+
+## 12. Example Output
 
 ### Executive Summary (sample)
 
@@ -468,7 +557,7 @@ See [docs/render-deploy.md](docs/render-deploy.md) for the long-form guide.
 
 ---
 
-## 12. API Endpoints
+## 13. API Endpoints
 
 | Method | Endpoint            | Auth        | Description                                          |
 | ------ | ------------------- | ----------- | ---------------------------------------------------- |
@@ -481,7 +570,7 @@ See [docs/render-deploy.md](docs/render-deploy.md) for the long-form guide.
 
 ---
 
-## 13. Scalability & Future Improvements
+## 14. Scalability & Future Improvements
 
 - **Multi-app dashboard** — manage many apps from one UI; per-app schedules and recipients.
 - **Slack integration** — post the digest to a `#product-pulse` channel via the same MCP server pattern.
@@ -495,7 +584,7 @@ See [docs/render-deploy.md](docs/render-deploy.md) for the long-form guide.
 
 ---
 
-## 14. Challenges Solved
+## 15. Challenges Solved
 
 - **LLM token limits** — token-aware chunker batches reviews under `CHUNK_TARGET_TOKENS` (3,500 by default) so each call stays well under context.
 - **Chunking strategy** — chunks are review-aligned, never mid-text, so themes stay attributable to specific quotes.
@@ -510,7 +599,7 @@ See [docs/render-deploy.md](docs/render-deploy.md) for the long-form guide.
 
 ---
 
-## 15. Author
+## 16. Author
 
 Built by **Krunal Bhandekar**.
 
