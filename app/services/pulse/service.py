@@ -161,11 +161,14 @@ class WeeklyPulseGenerator:
         window_start: datetime | None,
         window_end: datetime | None,
     ) -> str:
+        # Used as the Google Doc title and Gmail subject — the rendered
+        # markdown has its own cover heading, so this stays compact and
+        # ISO-dated for sortable threads/folders.
         if window_end:
-            return f"Weekly Pulse — {window_end.date().isoformat()}"
+            return f"Weekly Product Pulse — {window_end.date().isoformat()}"
         if window_start:
-            return f"Weekly Pulse — week of {window_start.date().isoformat()}"
-        return "Weekly Pulse"
+            return f"Weekly Product Pulse — week of {window_start.date().isoformat()}"
+        return "Weekly Product Pulse"
 
     def _overall_tone(self, buckets: list[ThemeBucket]) -> PulseTone:
         """Derive overall tone from the top themes' sentiment mix.
