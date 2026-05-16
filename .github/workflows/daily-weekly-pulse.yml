@@ -1,9 +1,9 @@
-name: Daily Weekly Pulse Trigger
+name: Weekly Product Pulse Trigger
 
 on:
   schedule:
-    # 06:30 UTC every day (12:00 IST). Adjust as needed.
-    - cron: "30 6 * * *"
+    # Runs every Monday at 6:00 AM IST (00:30 UTC)
+    - cron: "30 0 * * 1"
   workflow_dispatch:
     inputs:
       dry_run:
