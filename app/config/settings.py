@@ -116,7 +116,7 @@ class _EnvLoaded(BaseSettings):
     # Deployment-specific identifiers
     google_doc_id: str = ""
     email_to: str = ""
-    mcp_base_url: str = ""
+    mcp_server_url: str = ""
     playstore_app_id: str = ""
     appstore_app_id: str = ""
 
@@ -150,7 +150,7 @@ class Settings:
     groq_api_key: str = ""
     google_doc_id: str = ""
     email_to: str = ""
-    mcp_base_url: str = ""
+    mcp_server_url: str = ""
     playstore_app_id: str = ""
     appstore_app_id: str = ""
 
@@ -166,7 +166,7 @@ class Settings:
             groq_api_key=env.groq_api_key,
             google_doc_id=env.google_doc_id,
             email_to=env.email_to,
-            mcp_base_url=env.mcp_base_url,
+            mcp_server_url=env.mcp_server_url,
             playstore_app_id=env.playstore_app_id,
             appstore_app_id=env.appstore_app_id,
         )

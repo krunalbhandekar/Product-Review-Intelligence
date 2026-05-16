@@ -41,7 +41,7 @@ def _settings(**overrides: object) -> Settings:
         "MCP_RETRY_BACKOFF_SECONDS": 0.0,  # no real sleep in tests
     }
     settings_overrides: dict[str, object] = {
-        "mcp_base_url": BASE_URL,
+        "mcp_server_url": BASE_URL,
         "email_to": "team@example.com",
         "google_doc_id": "test-doc-id",
     }
@@ -191,7 +191,7 @@ async def test_transport_error_is_retried() -> None:
 
 @pytest.mark.asyncio
 async def test_missing_base_url_raises() -> None:
-    settings = Settings(mcp_base_url="")
+    settings = Settings(mcp_server_url="")
     with pytest.raises(ValueError):
         MCPClient(settings=settings)
 

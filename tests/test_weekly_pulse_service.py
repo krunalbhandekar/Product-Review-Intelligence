@@ -48,7 +48,7 @@ def _settings(**overrides: object) -> Settings:
         "LOOKBACK_WEEKS": 4,
     }
     settings_overrides: dict[str, object] = {
-        "mcp_base_url": BASE_URL,
+        "mcp_server_url": BASE_URL,
         "email_to": "leads@example.com",
         "playstore_app_id": "com.example.app",
         "appstore_app_id": "12345",

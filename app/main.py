@@ -21,7 +21,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         environment=settings.app.ENVIRONMENT,
         api_key_configured=bool(settings.api_key),
         google_doc_id_configured=bool(settings.google_doc_id),
-        mcp_base_url=settings.mcp_base_url or None,
+        mcp_server_url=settings.mcp_server_url or None,
         groq_model=settings.groq.MODEL,
         groq_fallback_models=settings.groq.FALLBACK_MODELS,
         groq_token_threshold=settings.groq.TOKEN_THRESHOLD,

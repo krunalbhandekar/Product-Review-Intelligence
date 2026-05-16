@@ -82,7 +82,7 @@ class MCPClient:
         cfg = settings or get_settings()
         pipeline = cfg.pipeline
 
-        resolved_base = (base_url or cfg.mcp_base_url).rstrip("/")
+        resolved_base = (base_url or cfg.mcp_server_url).rstrip("/")
         if not resolved_base:
             raise ValueError(
                 "MCP base URL not configured. Set MCP_SERVER_URL."
