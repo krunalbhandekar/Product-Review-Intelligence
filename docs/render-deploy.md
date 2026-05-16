@@ -26,20 +26,13 @@ Pushes to `main` auto-deploy (`autoDeploy: true`).
 
 - **Python:** 3.11.9 (pinned via `PYTHON_VERSION`)
 - **Port:** Render injects `$PORT`; uvicorn binds to it.
-- **Workers:** `--workers 1` — free tier has 512 MB RAM; one async worker is the right shape for an I/O-bound app and avoids OOM kills.
-- **Proxy:** `--proxy-headers --forwarded-allow-ips=*` so `request.client.host` and scheme reflect the Render edge proxy.
-- **Logging:** `--no-access-log` keeps per-request noise out; the app's `structlog` config in [app/core/logging.py](../app/core/logging.py) handles structured logs.
-- **Keep-alive:** `--timeout-keep-alive 30` matches Render's idle proxy budget.
+- **Workers:** Single async worker (`WEB_CONCURRENCY=1`). Free tier has 512 MB RAM; one async worker is the right shape for an I/O-bound app and avoids OOM kills.
+- **No Docker:** Deploys as a standard Render Python web service. Render runs `buildCommand` then `startCommand` directly against the Python runtime — no container build step.
 
 ### Start command
 
 ```
-uvicorn app.main:app \
-  --host 0.0.0.0 --port $PORT \
-  --workers 1 \
-  --proxy-headers --forwarded-allow-ips=* \
-  --no-access-log \
-  --timeout-keep-alive 30
+uvicorn app.main:app --host 0.0.0.0 --port $PORT
 ```
 
 ### Build command
